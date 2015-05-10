@@ -9,10 +9,12 @@
 + (instancetype)sharedNetTools
 {
     static id obj;
+    
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         obj = [[self alloc] init];
     });
+    
     return obj;
 }
 
@@ -31,15 +33,22 @@
 {
     // 如果用户名或者密码为空 直接返回
     if(self.username.length == 0 || self.password.length == 0)
-        return;
+    {
+            return;
+    }
+    
     // 登录的脚本
     NSURL *url = [NSURL URLWithString:@"http://127.0.0.1/loginhmac.php"];
+    
     // 请求
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+    
     // 设置请求体
     request.HTTPMethod = @"POST";
+    
     // 把密码加密后，在发送给服务器
     NSString *pwd = [self timeEncrypt];
+    
     //    NSLog(@"发送的密码是%@", pwd);
     NSString *bodyString = [NSString stringWithFormat:@"username=%@&password=%@", self.username, pwd];
     
@@ -49,12 +58,14 @@
     [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *data, NSError *connectionError)
      {
          NSDictionary * result = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+    
          NSLog(@"响应%@", result);
          
          if([result[@"userId"] integerValue]> 0)
          {
              NSLog(@"登陆成功\n%d", [result[@"userId"] intValue]);
              [self saveUserInfo];
+         
              // 登录成功 发送通知
              [[NSNotificationCenter defaultCenter] postNotificationName:LKLoginSuccessedNotification object:nil];
          }
@@ -78,8 +89,11 @@
     
     // 利用脚本获得服务器的时间
     NSURL *url = [NSURL URLWithString:@"http://127.0.0.1/hmackey.php"];
+    
     NSData *data = [NSData dataWithContentsOfURL:url];
+    
     NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:NULL];
+    
     // 取出当前时间
     NSString *time = dict[@"key"];
     
@@ -97,11 +111,13 @@
 {
     // 保存用户信息
     NSUserDefaults *d = [NSUserDefaults standardUserDefaults];
+    
     [d setObject:self.username forKey:LKUserName];
+    
     [d synchronize];
     
     NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
-//    NSLog(@"bundleId - %@", bundleId);
+
     [SSKeychain setPassword:self.password forService:bundleId account:self.username];
 
 }
@@ -111,11 +127,11 @@
 {
     // 加载用户信息
     NSUserDefaults *d = [NSUserDefaults standardUserDefaults];
+    
     self.username = [d objectForKey:LKUserName];
-    NSLog(@"%@", self.username);
-    NSLog(@"111111111%@", [SSKeychain allAccounts]);
     
     NSString *bundleId = [NSBundle mainBundle].bundleIdentifier;
+   
     self.password = [SSKeychain passwordForService:bundleId account:self.username];
 }
 @end
